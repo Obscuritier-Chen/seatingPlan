@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+  <title>随机座位表</title>
+  <style>
+    table {
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 5px;
+      min-width: 70px;
+      height: 20px;
+    }
+  </style>
+</head>
+<body>
+    <label for="rowInput">行数：</label>
+    <input type="number" id="rowInput">
+    <label for="colInput">列数：</label>
+    <input type="number" id="colInput">
+    <button onclick="generateTable()">确定</button>
+
+    <table id="table"></table>
+
+    <div id="student" style="position: absolute; top: 50px; right: 50px;">
+        <div style="font-size: 18px;">学生:</div>
+        <label for="rowInput">数量：</label> <input type="number" id="studentNum">
+        <button onclick="createStudentList()">确定</button>
+        <div id="studentList" style="margin-top: 10px;">
+        </div>
+    </div>
+<script>
+    let studentName=[];
+    let seatingPlan;
+    let studentNum=0;
+    let row,col;
+    let studentQuery=[];
+    let mode='normal';
+    function tableDisplay()
+    {
+        for(let i=1;i<=row;i++)
+        {
+            for(let j=1;j<=col;j++)
+            {
+                if(studentName[seatingPlan[i][j]]==null)
+                    continue;
+                document.getElementById(i+'_'+j).innerText=seatingPlan[i][j]+'.'+studentName[seatingPlan[i][j]].name;
+            }
+        }
+    }
+    function allotStudent(num,r,c)
+    {
+        r=Number(r),c=Number(c);
+        /*if(r==NaN||c==NaN);
+        {
+            console.log(r=NaN||c==NaN);
+            alert('非法行/列数');
+            return;
+        }*/
+        if(r>row||r<1||c>col||c<1||seatingPlan[r][c]>0)
+        {
+            alert('非法行/列数');
+            return;
+        }
+        event.target.parentNode.remove();
+        document.getElementById(num).remove();
+        document.getElementById(r+'_'+c).innerText=num+'.'+studentName[num].name;
+        seatingPlan[r][c]=num;
+    }
+    function allotPopup(num)
+    {
+        var buttonRect = event.target.getBoundingClientRect();
+
+        // 创建矩形元素
+        var rectangle = document.createElement("div");
+        rectangle.style.position = "absolute";
+        rectangle.style.top = buttonRect.top + "px";
+        rectangle.style.left = buttonRect.right + 10 + "px";
+        rectangle.style.width = "200px";
+        rectangle.style.height = "150px";
+        rectangle.style.backgroundColor = "white";
+        rectangle.style.border = "1px solid black";
+        rectangle.style.zIndex = "999";
+
+        // 创建行和列的输入框
+        var rowInput = document.createElement("input");
+        rowInput.type = "text";
+        rowInput.placeholder = "行";
+        rectangle.appendChild(rowInput);
+
+        var columnInput = document.createElement("input");
+        columnInput.type = "text";
+        columnInput.placeholder = "列";
+        rectangle.appendChild(columnInput);
+
+        // 创建确认按钮
+        var confirmButton = document.createElement("button");
+        confirmButton.textContent = "确认";
+        confirmButton.onclick = function() {
+            // 调用另一个函数，并传递行和列的值作为参数
+            allotStudent(num,rowInput.value, columnInput.value);
+        };
+        rectangle.appendChild(confirmButton);
+
+        var close=document.createElement('button');
+        close.innerText='关闭';
+        close.onclick=function(){
+            rectangle.remove();
+        }
+        rectangle.appendChild(close);
+
+        // 将矩形元素添加到页面中
+        document.body.appendChild(rectangle);
+    }
+    function kickStudent(i,j)
+    {
+        if(seatingPlan[i][j]==null||seatingPlan[i][j]==0)
+            return;
+        
+        document.getElementById(i+'_'+j).innerText='';
+        var newWaitingStu=document.createElement('div');
+        newWaitingStu.id=seatingPlan[i][j];
+        newWaitingStu.innerText=seatingPlan[i][j]+'.'+studentName[seatingPlan[i][j]].name;
+
+        var temp=seatingPlan[i][j];
+        var allotBtn=document.createElement('button');
+        allotBtn.onclick=function(){
+            allotPopup(temp);
+        }
+        allotBtn.innerText='分配';
+        newWaitingStu.appendChild(allotBtn);
+
+        document.getElementById('waitingList').appendChild(newWaitingStu);
+
+        seatingPlan[i][j]=null;
+    }
+    function generateTable()
+    {
+        row=Number(document.getElementById("rowInput").value);
+        col=Number(document.getElementById("colInput").value);
+        var table = document.getElementById("table");
+        // 显示警告弹窗
+        var confirmation = confirm("这会覆盖掉原有修改，是否继续？");
+        if (confirmation)
+        {
+            seatingPlan=new Array(row+1);
+            for(let i=1;i<=row;i++)
+                seatingPlan[i]=new Array(col+1).fill(0);
+            table.innerHTML = "";
+            var table = document.getElementById("table");
+            table.style.marginTop='10px';
+            table.innerHTML = "";
+
+            if(document.getElementById('waitingList')!=null)
+                document.getElementById('waitingList').remove();
+            for (var i = 1; i <= row; i++)
+            {
+                var rowElement = document.createElement("tr");
+                for (var j = 1; j <= col; j++)
+                {
+                    var cell = document.createElement("td");
+                    cell.id=i+'_'+j;
+
+                    (function(i,j){
+                        cell.addEventListener('contextmenu',function(){
+                            kickStudent(i,j);
+                            event.preventDefault(); // 阻止默认的右键菜单弹出
+                        });
+                    })(i,j);
+                    //cell.textContent = "行 " + (i + 1) + ", 列 " + (j + 1);
+                    rowElement.appendChild(cell);
+                }
+                table.appendChild(rowElement);
+            }
+
+            if(document.getElementById('waitingList')==null)
+            {
+                var waitingList=document.createElement('div');
+                waitingList.id='waitingList';
+                waitingList.innerText='等候队列:';
+                document.body.appendChild(waitingList);
+
+                var text=document.createElement('div');
+                text.style.color='grey';
+                text.innerText='右键表格中的学生将其踢入等候队列';
+                waitingList.appendChild(text);
+            }
+            if(document.getElementById('generateSeating')==null)
+            {
+                var generateBtn=document.createElement('button');
+                generateBtn.id='generateSeating';
+                generateBtn.innerText='生成座位表';
+                generateBtn.style.marginTop='10px';
+                generateBtn.onclick=function(){
+                    generateSeating();
+                }
+                document.body.appendChild(generateBtn);
+            }
+            document.body.appendChild(document.createElement('br'));
+            if(document.getElementById('download')==null)
+            {
+                var downloadBtn=document.createElement('button');
+                downloadBtn.id='download';
+                downloadBtn.innerText='下载座位表';
+                downloadBtn.onclick=function(){
+                    downloadTable();
+                }
+                document.body.appendChild(downloadBtn);
+
+                var text=document.createElement('div');
+                text.style.color='grey';
+                text.innerText='下载文件格式为.csv excel打开即可';
+                document.body.appendChild(text);
+            }
+        }
+    }
+    function randomSeatingGenarate(num)
+    {
+        num=Number(num);
+        studentQuery = Array.from({length: num}, (_, index) => index + 1);
+        for (let i = studentQuery.length - 1; i > 0; i--)
+        {
+            let j = Math.floor(Math.random() * (i + 1));
+            [studentQuery[i], studentQuery[j]] = [studentQuery[j], studentQuery[i]];
+        }
+        let tmpCnt=0;
+        for(var i=1;i<=row;i++)
+            for(var j=1;j<=col;j++)
+            {
+                seatingPlan[i][j]=studentQuery[tmpCnt];
+                tmpCnt++;
+            }
+    }
+    function generateSeating()
+    {
+        if(studentNum>row*col)
+        {
+            alert('学生数不可超过座位数');
+            return;
+        }
+        if(row==0||col==0)
+        {
+            alert('座位表大小不可为0');
+            return;
+        }
+        if(studentNum==0)
+        {
+            alert('学生数不可为0');
+            return;
+        }
+        document.getElementById('waitingList').remove();
+        var waitingList=document.createElement('div');
+        waitingList.id='waitingList';
+        waitingList.innerText='等候队列:';
+        document.body.insertBefore(waitingList,document.getElementById('generateSeating'));
+
+        var text=document.createElement('div');
+        text.style.color='grey';
+        text.innerText='右键表格中的学生将其踢入等候队列';
+        waitingList.appendChild(text);
+        if(mode=='normal')
+            randomSeatingGenarate(studentNum);
+        tableDisplay();
+    }
+    function downloadTable()
+    {
+        let csvContent = '';
+        csvContent+=',';
+        for(let i=1;i<=col;i++)
+            csvContent+=`col${i},`;
+        csvContent+='\n';
+        for (let i = 1; i <= row; i++)
+        {
+            csvContent+=`row${i},`;
+            for(let j=1;j<=col;j++)
+            {
+                if(seatingPlan[i][j]==null||seatingPlan[i][j]==0)
+                {
+                    csvContent+=',';
+                    continue;
+                }
+                csvContent += `${seatingPlan[i][j]}.${studentName[seatingPlan[i][j]].name},`;
+            }
+                
+            csvContent+='\n';
+        }
+            
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'seating_plan.csv';
+
+        link.click();
+
+        URL.revokeObjectURL(link.href);
+    }
+    function updateStudentName(index, id)
+    {
+        let value=document.getElementById(id).value;
+        studentName[index].name = value;
+    }
+    function createStudentList()
+    {
+        studentName=[];
+        var studentNumInput = document.getElementById("studentNum");
+        studentNum = Number(parseInt(studentNumInput.value));
+
+        if (!isNaN(studentNum) && studentNum > 0)
+        {
+            var studentList = document.getElementById("studentList");
+            studentList.innerHTML = "";
+            studentName.push(null);
+            for (var i = 1; i <= studentNum; i++)
+            {
+                studentName.push({ name: '' });
+
+                var container=document.createElement('div');
+                container.style.width='204px';
+                container.style.marginBottom='3px';
+
+                var label = document.createElement("label");
+                label.setAttribute("for", "input" + i);
+                label.textContent = i + ". ";
+
+                var input = document.createElement("input");
+                input.style.float='right';
+                input.setAttribute("type", "text");
+                input.setAttribute("id", "input" + i);
+                (function(index,id) {//闭包执行防止被下一个覆盖
+                    input.addEventListener('input', function() {
+                    updateStudentName(index,id);
+                });
+                })(i,input.id);
+
+                container.appendChild(label);
+                container.appendChild(input);
+                studentList.appendChild(container);
+            }
+        }
+    }
+    document.getElementById("rowInput").addEventListener("input", restrictInputRange_rc);
+    document.getElementById("colInput").addEventListener("input", restrictInputRange_rc);
+
+    function restrictInputRange_rc(event)
+    {
+        var input = event.target;
+        var value = input.value.trim();
+        if (value !== "")
+        {
+            var numValue = parseInt(value);
+    
+            if (isNaN(numValue) || numValue < 0)
+                input.value = 0;
+            else if (numValue > 10)
+                input.value = 10;
+        }
+    }
+
+    document.getElementById('studentNum').addEventListener('input',restrictInputRange_stuNum)
+
+    function restrictInputRange_stuNum(event)
+    {
+        var input = event.target;
+        var value = input.value.trim();
+        if (value !== "")
+        {
+            var numValue = parseInt(value);
+    
+            if (isNaN(numValue) || numValue < 0)
+                input.value = 0;
+            else if (numValue > 60)
+                input.value = 60;
+        }
+    }
+  </script>
+</body>
+</html>
